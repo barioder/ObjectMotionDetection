@@ -51,6 +51,7 @@ class Detector:
 
         detections = self.model(inputTensor)
 
+
         bboxs = detections['detection_boxes'][0].numpy()
         classIndexes = detections['detection_classes'][0].numpy().astype(np.int32)
         classScores = detections['detection_scores'][0].numpy()
@@ -58,14 +59,15 @@ class Detector:
         imH, imW, imC = image.shape
         bboxIdx = tf.image.non_max_suppression(bboxs, classScores, max_output_size=50,
                                                iou_threshold=threshold, score_threshold=threshold)
-        print(bboxIdx)
+        # print(bboxIdx)
+
         if len(bboxs) != 0:
             for i in bboxIdx:
                 bbox = tuple(bboxs[i].tolist())
                 classConfidence = round(100*classScores[i])
                 classIndex = classIndexes[i]
 
-                classLableText = self.classesList[classIndex]
+                classLableText = self.classesList[classIndex].upper()
                 classColor = self.colorList[classIndex]
 
                 displayText = '{}:{}%'.format(classLableText, classConfidence)
@@ -88,4 +90,32 @@ class Detector:
         cv2.imwrite(self.modelName + '.jpg', bboxImage)
         cv2.imshow('Result', bboxImage)
         cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+
+    def predictVid(self, videoPath, threshold = 0.5):
+        cap = cv2.VideoCapture(videoPath)
+
+        if (cap.isOpened()==False):
+            print('Error!!! could not open video')
+            return
+
+        (success, image) = cap.read()
+        startTime = 0
+        while success:
+            currentTime = time.time()
+            fps = 1/(currentTime-startTime)
+
+            startTime = currentTime
+            bboxImage = self.createBoundingBox(image, threshold)
+
+            cv2.putText(bboxImage, 'FPS: ' + str(int(fps)), (20, 70), cv2.FONT_HERSHEY_PLAIN, 2, (0, 255 ,0))
+            cv2.imshow("Video Result", bboxImage)
+
+            key_press = cv2.waitKey(1)& 0xFF
+            if key_press == ord('q'):
+                break
+
+            (success, image) = cap.read()
+
         cv2.destroyAllWindows()
